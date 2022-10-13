@@ -11,12 +11,12 @@ const app = express();
 app.set("port", process.env.PORT || 8080);
 
 // fake data
-let fakeUser = { id: 1, username: "test@test.com", password: "test@test.com" };
+let fakeUser = {id: 1, username: "test@test.com", password: "test@test.com"};
 
 // common middleware
 app.use(morgan("dev"));
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({extended: true}));
 app.use(cookieParser("passportExample"));
 app.use(
   session({
@@ -60,10 +60,10 @@ passport.use(
         if (password === fakeUser.password) {
           return done(null, fakeUser);
         } else {
-          return done(null, false, { message: "Incorrect password." });
+          return done(null, false, {message: "Incorrect password."});
         }
       } else {
-        return done(null, false, { message: "Incorrect username." });
+        return done(null, false, {message: "Incorrect username."});
       }
     }
   )
@@ -73,6 +73,7 @@ app.get("/", (req, res) => {
   if (!req.user) {
     res.sendFile(__dirname + "/index.html");
   } else {
+    console.log(req.user);
     const user = req.user.username;
     const html = `
       <!DOCTYPE html>
@@ -98,15 +99,19 @@ app.get("/", (req, res) => {
 // Authenticate Requests
 app.post(
   "/login",
-  passport.authenticate("local", { failureRedirect: "/" }),
+  passport.authenticate("local", {failureRedirect: "/"}),
   (req, res) => {
     res.send("Login Success");
   }
 );
 
 app.get("/logout", (req, res) => {
-  req.logout();
-  res.redirect("/");
+  req.logout((err) => {
+    if (err) {
+      console.log(err);
+    }
+    res.redirect("/");
+  });
 });
 
 // 404 error handlers
