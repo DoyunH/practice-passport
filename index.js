@@ -11,12 +11,12 @@ const app = express();
 app.set("port", process.env.PORT || 8080);
 
 // fake data
-let fakeUser = {id: 1, username: "test@test.com", password: "test@test.com"};
+let fakeUser = { id: 1, username: "test@test.com", password: "1234" };
 
 // common middleware
 app.use(morgan("dev"));
 app.use(express.json());
-app.use(express.urlencoded({extended: true}));
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser("passportExample"));
 app.use(
   session({
@@ -52,7 +52,7 @@ passport.use(
     {
       usernameField: "username",
       passwordField: "password",
-      session: true,
+      session: false,
     },
     (username, password, done) => {
       // Originally it should be checked from DB
@@ -60,10 +60,10 @@ passport.use(
         if (password === fakeUser.password) {
           return done(null, fakeUser);
         } else {
-          return done(null, false, {message: "Incorrect password."});
+          return done(null, false, { message: "Incorrect password." });
         }
       } else {
-        return done(null, false, {message: "Incorrect username."});
+        return done(null, false, { message: "Incorrect username." });
       }
     }
   )
@@ -99,9 +99,26 @@ app.get("/", (req, res) => {
 // Authenticate Requests
 app.post(
   "/login",
-  passport.authenticate("local", {failureRedirect: "/"}),
+  passport.authenticate("local", { failureRedirect: "/" }),
   (req, res) => {
-    res.send("Login Success");
+    // alert login sucess and after push button go to main page
+    const html = `
+      <!DOCTYPE html>
+        <html lang="en">
+          <head>
+            <meta charset="UTF-8" /> 
+            <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <title>Login Success</title>
+          </head>
+          <body>
+            <h1>Login Success</h1>
+            <p>Hello ${req.user.username}!!</p>
+            <button type='button' onclick="location.href='/'">Go to main page</button>
+          </body>
+        </html>
+    `;
+    res.send(html);
   }
 );
 
