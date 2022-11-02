@@ -2,6 +2,8 @@ const express = require("express");
 const morgan = require("morgan");
 const cookieParser = require("cookie-parser");
 const session = require("express-session");
+const models = require("./sequelize/models");
+const path = require("path");
 const passport = require("passport");
 const LocalStrategy = require("passport-local").Strategy;
 
@@ -9,9 +11,6 @@ const app = express();
 
 // set port
 app.set("port", process.env.PORT || 8080);
-
-// fake data
-let fakeUser = { id: 1, username: "test@test.com", password: "1234" };
 
 // common middleware
 app.use(morgan("dev"));
@@ -30,6 +29,9 @@ app.use(
   })
 );
 
+// userData is from database
+let userData;
+
 // passport middleware
 app.use(passport.initialize());
 app.use(passport.session());
@@ -43,7 +45,7 @@ passport.serializeUser((user, done) => {
 // session handling - deserializeUser (every time when user access)
 passport.deserializeUser((id, done) => {
   console.log("deserializeUser");
-  done(null, fakeUser); // send to req.user
+  done(null, userData); // send to req.user
 });
 
 // passport local strategy
@@ -55,16 +57,25 @@ passport.use(
       session: false,
     },
     (username, password, done) => {
-      // Originally it should be checked from DB
-      if (username === fakeUser.username) {
-        if (password === fakeUser.password) {
-          return done(null, fakeUser);
-        } else {
-          return done(null, false, { message: "Incorrect password." });
-        }
-      } else {
-        return done(null, false, { message: "Incorrect username." });
-      }
+      // check username and password from DB
+      models.newUser
+        .findOne({
+          where: {
+            username: username,
+            password: password,
+          },
+        })
+        .then((user) => {
+          if (!user) {
+            return done(null, false, { message: "Incorrect username." });
+          }
+          userData = user;
+          return done(null, user);
+        })
+        .catch((err) => {
+          console.error(err);
+          done(err);
+        });
     }
   )
 );
@@ -93,6 +104,40 @@ app.get("/", (req, res) => {
     `;
     res.send(html);
   }
+});
+
+app.get("/db", (req, res, next) => {
+  models.newUser
+    .findAll()
+    .then((users) => {
+      res.json(users);
+    })
+    .catch((err) => {
+      console.error(err);
+      next(err);
+    });
+});
+
+app.get("/signup", (req, res) => {
+  res.sendFile(path.join(__dirname, "signup.html"));
+});
+
+app.post("/signup", (req, res, next) => {
+  let body = req.body;
+
+  models.newUser
+    .create({
+      username: body.username,
+      password: body.password,
+    })
+    .then((newUser) => {
+      console.log("signed up ~!");
+      res.redirect("/");
+    })
+    .catch((err) => {
+      console.error(err);
+      next(err);
+    });
 });
 
 // passport Login : strategy for local authentication
